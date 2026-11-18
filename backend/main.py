@@ -84,6 +84,11 @@ class FindingPatch(BaseModel):
     why_it_matters: Optional[str] = None
     priority: Optional[str] = None
 
+class DocumentReviewPatch(BaseModel):
+    status: Optional[str] = None  # e.g. "Reviewed", "Needs Clarification", "Analysed"
+    review_notes: Optional[str] = None
+    trigger_reanalysis: Optional[bool] = False
+
 class ActionCreate(BaseModel):
     finding_id: int
     title: str
@@ -456,6 +461,70 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
         "findings_created": len(findings_created),
         "finding_ids": findings_created,
         "message": f"Document analysed. {len(findings_created)} AI-suggested finding(s) created for human review."
+    }
+
+@app.patch("/api/documents/{doc_id}/review")
+def review_document(
+    doc_id: int,
+    patch: DocumentReviewPatch,
+    db: Session = Depends(get_db),
+    x_user_email: Optional[str] = Header(None),
+    x_user_role: Optional[str] = Header(None)
+):
+    doc = db.query(models.Document).filter_by(id=doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    old_status = doc.status
+    if patch.status:
+        doc.status = patch.status
+
+    reanalysis_findings_count = 0
+    if patch.trigger_reanalysis and doc.extracted_text:
+        matches = match_dpdp_requirements(doc.extracted_text, db)
+        for req, matched_kw, kb in matches[:2]:
+            if req:
+                proc = db.query(models.ProcessingActivity).first()
+                # Check if identical finding already exists for this doc & requirement
+                existing = db.query(models.Finding).filter_by(
+                    document_id=doc.id, requirement_id=req.id
+                ).first()
+                if not existing:
+                    finding = models.Finding(
+                        title=kb["finding_title_template"],
+                        description=f"{kb['finding_description_template']} [Re-analysis matched keywords: {', '.join(matched_kw[:5])}]",
+                        requirement_id=req.id,
+                        process_id=proc.id if proc else 1,
+                        document_id=doc.id,
+                        department=proc.department if proc else "General",
+                        evidence_reviewed=f"{doc.filename} (Re-analysed)",
+                        missing_or_unclear=f"Re-analysis compliance gap identified via keywords: {', '.join(matched_kw[:5])}",
+                        why_it_matters=kb["why_it_matters"],
+                        suggested_action=kb["suggested_action"],
+                        priority="High" if "Section 5" in req.provision_ref else "Medium",
+                        confidence="Medium (Re-Analysis Grounded)",
+                        review_status="AI Suggested",
+                    )
+                    db.add(finding)
+                    reanalysis_findings_count += 1
+
+    db.commit()
+
+    notes_str = f" Notes: {patch.review_notes}" if patch.review_notes else ""
+    reanalysis_str = f" Re-analysis produced {reanalysis_findings_count} new finding(s)." if patch.trigger_reanalysis else ""
+    log = models.AuditLog(
+        actor=x_user_email or "anonymous",
+        action_type=f"Document {patch.status or 'Reviewed'}",
+        details=f"Document ID {doc_id} ('{doc.title}'): status {old_status} -> {doc.status}. Role: {x_user_role or 'unknown'}.{notes_str}{reanalysis_str}"
+    )
+    db.add(log)
+    db.commit()
+
+    return {
+        "message": f"Document status updated to {doc.status}",
+        "document_id": doc.id,
+        "status": doc.status,
+        "reanalysis_findings_created": reanalysis_findings_count,
     }
 
 @app.patch("/api/findings/{finding_id}")

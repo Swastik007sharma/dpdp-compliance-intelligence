@@ -32,6 +32,8 @@ export const api = {
     apiFetch(`/api/inventory/${id}`, { method: "DELETE" }, email),
   uploadDocument: (formData: FormData, email?: string) =>
     apiFetch("/api/documents/upload", { method: "POST", body: formData, headers: {} }, email),
+  reviewDocument: (id: number, data: any, email?: string, role?: string) =>
+    apiFetch(`/api/documents/${id}/review`, { method: "PATCH", body: JSON.stringify(data) }, email, role),
   patchFinding: (id: number, data: any, email?: string, role?: string) =>
     apiFetch(`/api/findings/${id}`, { method: "PATCH", body: JSON.stringify(data) }, email, role),
   createAction: (data: any, email?: string) =>
