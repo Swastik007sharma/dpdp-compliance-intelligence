@@ -11,7 +11,7 @@
 **/.env*.local
 
 # Uploaded temp files
-server/uploads/
+backend/uploads/
 
 # OS & Editors
 .DS_Store
