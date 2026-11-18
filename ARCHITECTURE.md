@@ -42,6 +42,7 @@
 - **No Hallucination Risk:** Semantic vector search (e.g., `pgvector`) was deliberately eschewed in favour of lawyer-curated keyword and clause matching grounded in approved DPDP provisions.
 - **Citation Preservation:** `pypdf` and `python-docx` extract text with page and heading offsets, linking every generated finding directly to specific clauses.
 - **Reliable Cached Fallback:** Pre-seeded documents and findings ensure zero-latency evaluation even in restricted network environments.
+- **Document Review & Re-Analysis Workflow:** Reviewers can mark documents as `Reviewed` or `Needs Clarification` and trigger automated re-analysis against the DPDP knowledge base via `PATCH /api/documents/{doc_id}/review`, recording an immutable audit trail.
 
 ---
 
@@ -56,8 +57,19 @@
 
 ---
 
-## 4. Prototype Limitations & Production Roadmap
+## 4. Phase 2 Production Hardening Roadmap
 
-1. **OCR Support:** Currently supports text-based `.pdf` and `.docx`. Scanned bitmap PDFs require integration with an OCR pipeline (e.g., Tesseract or Google Cloud Document AI).
-2. **Multi-Tenant Partitioning:** Current prototype operates on a single organization scope (`Bharat Precision Engineering Pvt. Ltd.`). Production will introduce `organisation_id` tenant isolation across all database queries.
-3. **Statutory Commencement Date Awareness:** Commencement metadata explicitly flags that major DPDP provisions take effect **13 May 2027** (per G.S.R. 843(E)), preventing premature non-compliance liability alerts.
+While the prototype provides a complete, demonstrable vertical slice, the following security and scalability enhancements are planned for Phase 2 production staging:
+
+1. **Database-Backed Session Token Verification in FastAPI:**
+   - Instead of trusting client-forwarded `x-user-role` / `x-user-email` headers, FastAPI will inspect the incoming Better Auth session token directly against the `session` and `user` tables in PostgreSQL (or verify an HMAC-signed token payload).
+2. **Multi-Tenant `organisation_id` Scoping & Row-Level Security (RLS):**
+   - Generalize the single-organization prototype into a multi-tenant platform by adding `organisation_id` foreign keys to all processing activities, documents, findings, and actions, backed by PostgreSQL Row-Level Security.
+3. **API Rate Limiting & DoS Protection:**
+   - Integrate Redis-backed rate limiting (`slowapi` on FastAPI, `@upstash/ratelimit` on Next.js) to restrict document uploads (e.g., 5/min) and demo resets.
+4. **MIME Magic-Byte Validation & Antivirus Scanning:**
+   - Verify file headers via `python-magic` to eliminate extension-spoofing risks, and quarantine files during asynchronous virus scanning before clause parsing.
+5. **Hybrid Retrieval with `pgvector`:**
+   - Introduce dense embedding search alongside the curated keyword matcher, with statutory reranking to maintain zero-hallucination compliance.
+6. **Optical Character Recognition (OCR):**
+   - Connect scanned image-only PDFs to a secure OCR pipeline (Google Cloud Document AI or Tesseract).

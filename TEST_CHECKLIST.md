@@ -21,7 +21,8 @@
 | **AC-09** | Accepted finding can become an action with owner, due date, status | `→ Convert to Action` modal requires Owner, Due Date, and Completion Criteria, creating an entry in `/actions`. | **PASS** |
 | **AC-10** | Changing action status updates dashboard metrics | Updating status on `/actions` immediately recalculates completion percentages and counts on `/dashboard`. | **PASS** |
 | **AC-11** | UI distinguishes AI suggestions from human-reviewed findings | Visual badge styling: purple `🤖 AI Suggested Finding` vs green `Accepted` and red `Rejected`. | **PASS** |
-| **AC-12** | No fabricated legal citations, fake certification claims, or scores | 100% grounded in official statutory text with legal disclaimers; no unexplained compliance percentage scores. | **PASS** |
+| **AC-12** | Document Review & Re-Analysis Workflow | Reviewer verification controls (`✓ Mark Reviewed`, `? Needs Clarification`, `⚡ Re-run DPDP Analysis`) update document status and log audit trails. | **PASS** |
+| **AC-13** | No fabricated legal citations, fake certification claims, or scores | 100% grounded in official statutory text with legal disclaimers; no unexplained compliance percentage scores. | **PASS** |
 
 ---
 
@@ -30,12 +31,13 @@
 ```
 [TEST STEP 1] Log in as reviewer@bharatprecision.example (Compliance Reviewer) -> PASS
 [TEST STEP 2] Open Documents -> inspect BPE_HR_Recruitment_Policy_v2.4.pdf -> PASS (Page 6, Section 4.2 cited)
-[TEST STEP 3] Open Findings -> trace finding to DPDP Act Section 8(7) & Rule 8 -> PASS
-[TEST STEP 4] Click "✓ Accept Finding" -> Status transitions from "AI Suggested" to "Accepted" -> PASS
-[TEST STEP 5] Click "→ Convert to Action" -> Assign to Anita Desai, due in 30 days -> PASS
-[TEST STEP 6] Open Action Plan -> Update status from "Not Started" to "Completed" -> PASS
-[TEST STEP 7] Open Dashboard -> Live metric reflects +1 completed action, 0 not started -> PASS
-[TEST STEP 8] File upload error validation -> Attempt non-pdf/docx upload -> PASS (HTTP 400 error banner shown)
+[TEST STEP 3] Execute Document Review -> Click "✓ Mark Reviewed" -> Document status updates live + AuditLog recorded -> PASS
+[TEST STEP 4] Open Findings -> trace finding to DPDP Act Section 8(7) & Rule 8 -> PASS
+[TEST STEP 5] Click "✓ Accept Finding" -> Status transitions from "AI Suggested" to "Accepted" -> PASS
+[TEST STEP 6] Click "→ Convert to Action" -> Assign to Anita Desai, due in 30 days -> PASS
+[TEST STEP 7] Open Action Plan -> Update status from "Not Started" to "Completed" -> PASS
+[TEST STEP 8] Open Dashboard -> Live metric reflects +1 completed action, 0 not started -> PASS
+[TEST STEP 9] File upload error validation -> Attempt non-pdf/docx upload -> PASS (HTTP 400 error banner shown)
 ```
 
 **Overall Section 10 Result: 100% PASS**
