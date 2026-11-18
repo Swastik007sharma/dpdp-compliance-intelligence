@@ -1,0 +1,20 @@
+# Python / Backend
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/.env
+
+# Next.js / Frontend
+**/node_modules/
+**/.next/
+**/.env.local
+**/.env*.local
+
+# Uploaded temp files
+server/uploads/
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
